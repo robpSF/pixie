@@ -125,6 +125,14 @@ if url_links:
                     if target_height > height:  # If height is the limiting factor
                         target_height = height
                         target_width = int(height * 16 / 9)
+                    if grab_center:
+                        x = (width - target_width) / 2
+                        y = (height - target_height) / 2
+                    else:
+                        x = 0
+                        y = 0
+                    box = (x, y, x + target_width, y + target_height)
+                    crop = img.crop(box)
                 elif aspect_ratio == "1:1":
                     if size_option == "Shrink to 500x500":
                         crop = ImageOps.fit(img, (500, 500), method=Image.LANCZOS, centering=(0.5, 0.5))
@@ -139,9 +147,6 @@ if url_links:
                         box = (x, y, x + target_width, y + target_height)
                         crop = img.crop(box)
 
-                if aspect_ratio != "1:1" or size_option == "Shrink to 500x500":
-                    crop = crop.resize((target_width, target_height), Image.LANCZOS)
-                
                 file_name = f"{search_term}_{index+1}_{aspect_ratio.replace(':', '_')}{extension}"
                 st.image(crop, caption=f"{aspect_ratio} Cropped Image {index+1}")
                 
