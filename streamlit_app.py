@@ -28,6 +28,9 @@ category = st.selectbox("Select category:", ["all", "fashion", "nature", "backgr
                                              "animals", "industry", "food", "computer", "sports", 
                                              "transportation", "travel", "buildings", "business", "music"], index=0)
 
+# Toggle to show/hide original image URLs
+show_urls = st.checkbox("Show original image URLs", False)
+
 # Cropping options
 crop_option = st.radio(
     "Choose cropping option:",
@@ -80,7 +83,8 @@ for page in range(1, NUM_PAGES + 1):
         if 'hits' in data and data['hits']:
             for image in data["hits"]:
                 url_links.append(image["largeImageURL"])
-                st.write(image["largeImageURL"])
+                if show_urls:
+                    st.write(image["largeImageURL"])
         else:
             if mode == "Search by Image ID":
                 st.warning(f"No image found for ID '{image_id}'.")
