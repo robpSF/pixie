@@ -12,7 +12,14 @@ URL_ENDPOINT = "https://pixabay.com/api/"
 # Streamlit input widgets
 st.title("Pixabay Image Downloader")
 
-query = st.text_input("Enter search query (e.g., 'nature', 'cars'):", "")
+# Toggle between searching by image ID or query
+mode = st.radio("Choose mode:", ("Search by Image ID", "Search by Query"))
+
+if mode == "Search by Image ID":
+    image_id = st.text_input("Enter image ID:", "2575608")
+else:
+    query = st.text_input("Enter search query (e.g., 'nature', 'cars'):", "")
+    
 image_type = st.selectbox("Select image type:", ["all", "photo", "illustration", "vector"], index=1)
 category = st.selectbox("Select category:", ["all", "fashion", "nature", "backgrounds", "science", "education", 
                                              "people", "feelings", "religion", "health", "places", 
@@ -23,14 +30,21 @@ grab_center = st.checkbox("Grab center of image?", True)
 PER_PAGE = st.slider("Number of images per page:", 1, 20, 6)
 NUM_PAGES = st.slider("Number of pages to retrieve:", 1, 10, 3)
 
-PARAMS = {
-    'key': API_KEY,
-    'q': query,
-    'image_type': image_type,
-    'category': category if category != "all" else None,
-    'per_page': PER_PAGE,
-    'page': 1
-}
+# Initialize parameters based on mode
+if mode == "Search by Image ID":
+    PARAMS = {
+        'key': API_KEY,
+        'id': image_id
+    }
+else:
+    PARAMS = {
+        'key': API_KEY,
+        'q': query,
+        'image_type': image_type,
+        'category': category if category != "all" else None,
+        'per_page': PER_PAGE,
+        'page': 1
+    }
 
 url_links = []
 
@@ -40,12 +54,15 @@ for page in range(1, NUM_PAGES + 1):
     req = requests.get(URL_ENDPOINT, params=PARAMS)
     data = req.json()
 
-    if 'hits' in data:
+    if 'hits' in data and data['hits']:
         for image in data["hits"]:
             url_links.append(image["largeImageURL"])
             st.write(image["largeImageURL"])
     else:
-        st.warning(f"No images found for query '{query}' on page {page}.")
+        if mode == "Search by Image ID":
+            st.warning(f"No image found for ID '{image_id}'.")
+        else:
+            st.warning(f"No images found for query '{query}' on page {page}.")
         break
 
 if url_links:
@@ -106,8 +123,9 @@ if url_links:
     
     # Provide the download link for the zip file
     zip_buffer.seek(0)
-    st.download_button("Download All Images as Zip", zip_buffer, f"{query.replace(' ', '_')}_images.zip", "application/zip")
+    zip_file_name = f"{image_id}_images.zip" if mode == "Search by Image ID" else f"{query.replace(' ', '_')}_images.zip"
+    st.download_button("Download All Images as Zip", zip_buffer, zip_file_name, "application/zip")
 
     st.success("Download and processing complete!")
 else:
-    st.warning(f"No images found for the query '{query}'.")
+    st.warning("No images found.")
