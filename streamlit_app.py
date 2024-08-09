@@ -27,7 +27,7 @@ category = st.selectbox("Select category:", ["all", "fashion", "nature", "backgr
                                              "transportation", "travel", "buildings", "business", "music"], index=0)
 save_cropped_version = st.checkbox("Save cropped version for profile pics?", True)
 grab_center = st.checkbox("Grab center of image?", True)
-PER_PAGE = st.slider("Number of images per page:", 1, 20, 6)
+PER_PAGE = st.slider("Number of images per page:", 3, 200, 6)  # Adjusted to valid range 3-200
 NUM_PAGES = st.slider("Number of pages to retrieve:", 1, 10, 3)
 
 # Initialize parameters based on mode
