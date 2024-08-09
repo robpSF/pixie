@@ -52,17 +52,29 @@ url_links = []
 for page in range(1, NUM_PAGES + 1):
     PARAMS['page'] = page
     req = requests.get(URL_ENDPOINT, params=PARAMS)
-    data = req.json()
-
-    if 'hits' in data and data['hits']:
-        for image in data["hits"]:
-            url_links.append(image["largeImageURL"])
-            st.write(image["largeImageURL"])
-    else:
-        if mode == "Search by Image ID":
-            st.warning(f"No image found for ID '{image_id}'.")
+    
+    # Check if the request was successful
+    if req.status_code == 200:
+        try:
+            data = req.json()
+        except requests.exceptions.JSONDecodeError:
+            st.error("Error parsing the response as JSON. The API might be down or returning unexpected content.")
+            st.write("Response content:", req.text)
+            break
+        
+        if 'hits' in data and data['hits']:
+            for image in data["hits"]:
+                url_links.append(image["largeImageURL"])
+                st.write(image["largeImageURL"])
         else:
-            st.warning(f"No images found for query '{query}' on page {page}.")
+            if mode == "Search by Image ID":
+                st.warning(f"No image found for ID '{image_id}'.")
+            else:
+                st.warning(f"No images found for query '{query}' on page {page}.")
+            break
+    else:
+        st.error(f"Request failed with status code {req.status_code}.")
+        st.write("Response content:", req.text)
         break
 
 if url_links:
