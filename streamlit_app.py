@@ -5,7 +5,7 @@ import streamlit as st
 from io import BytesIO
 import zipfile
 
-API_KEY = "3939164-25537e67461883e93bbf859c4"
+API_KEY = st.secrets["pixabay_api_key"]
 URL_ENDPOINT = "https://pixabay.com/api/"
 
 # Streamlit input widgets
