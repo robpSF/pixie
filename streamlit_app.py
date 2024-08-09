@@ -17,17 +17,30 @@ mode = st.radio("Choose mode:", ("Search by Image ID", "Search by Query"))
 
 if mode == "Search by Image ID":
     image_id = st.text_input("Enter image ID:", "2575608")
+    search_term = image_id  # Use the image ID for naming
 else:
     query = st.text_input("Enter search query (e.g., 'nature', 'cars'):", "")
+    search_term = query.replace(' ', '_')  # Use the query for naming
     
 image_type = st.selectbox("Select image type:", ["all", "photo", "illustration", "vector"], index=1)
 category = st.selectbox("Select category:", ["all", "fashion", "nature", "backgrounds", "science", "education", 
                                              "people", "feelings", "religion", "health", "places", 
                                              "animals", "industry", "food", "computer", "sports", 
                                              "transportation", "travel", "buildings", "business", "music"], index=0)
-save_cropped_version = st.checkbox("Save cropped version for profile pics?", True)
+
+# Cropping options
+crop_option = st.radio(
+    "Choose cropping option:",
+    ("Save cropped version for profile pics", "Crop to custom aspect ratio", "No cropping")
+)
+
+if crop_option == "Crop to custom aspect ratio":
+    aspect_ratio = st.radio("Select aspect ratio:", ("16:9", "1:1"))
+else:
+    aspect_ratio = None
+
 grab_center = st.checkbox("Grab center of image?", True)
-PER_PAGE = st.slider("Number of images per page:", 3, 200, 6)  # Adjusted to valid range 3-200
+PER_PAGE = st.slider("Number of images per page:", 3, 200, 6)  # Valid range 3-200
 NUM_PAGES = st.slider("Number of pages to retrieve:", 1, 10, 3)
 
 # Initialize parameters based on mode
@@ -86,7 +99,7 @@ if url_links:
             image_data = r.content
             
             extension = image_url[-4:]
-            file_name = f"image_{index+1}{extension}"
+            file_name = f"{search_term}_{index+1}{extension}"
             
             img = Image.open(BytesIO(image_data))
             st.image(img, caption=f"Downloaded Image {index+1}")
@@ -97,8 +110,8 @@ if url_links:
             # Save the original image in the zip file
             zf.writestr(file_name, img_buffer.getvalue())
             
-            # If crop is true then fit to 250 x 250 for profile image
-            if save_cropped_version:
+            # Cropping logic
+            if crop_option == "Save cropped version for profile pics":
                 if grab_center:
                     width, height = img.size
                     x = (width / 2) - 125
@@ -108,15 +121,39 @@ if url_links:
                     y = 0
                 box = (x, y, x + 250, y + 250)
                 crop = img.crop(box)
-                crop_file_name = f"image_{index+1}_cropped{extension}"
+                crop_file_name = f"{search_term}_{index+1}_cropped{extension}"
                 
                 crop_buffer = BytesIO()
                 crop.save(crop_buffer, format=img.format)
                 zf.writestr(crop_file_name, crop_buffer.getvalue())
                 st.image(crop, caption=f"Cropped Image {index+1}")
 
+            elif crop_option == "Crop to custom aspect ratio":
+                width, height = img.size
+                if aspect_ratio == "16:9":
+                    target_width = width
+                    target_height = int(width * 9 / 16)
+                else:  # "1:1"
+                    target_width = target_height = min(width, height)
+                
+                if grab_center:
+                    x = (width - target_width) / 2
+                    y = (height - target_height) / 2
+                else:
+                    x = 0
+                    y = 0
+                
+                box = (x, y, x + target_width, y + target_height)
+                crop = img.crop(box)
+                crop_file_name = f"{search_term}_{index+1}_{aspect_ratio.replace(':', '_')}{extension}"
+                
+                crop_buffer = BytesIO()
+                crop.save(crop_buffer, format=img.format)
+                zf.writestr(crop_file_name, crop_buffer.getvalue())
+                st.image(crop, caption=f"{aspect_ratio} Cropped Image {index+1}")
+
             # Twitter BG
-            if save_cropped_version:
+            if crop_option == "Save cropped version for profile pics" or crop_option == "Crop to custom aspect ratio":
                 if grab_center:
                     x = 0  # (width/2)-125  Don't adjust X for Twitter banner
                     y = (img.height / 2) - 105
@@ -126,7 +163,7 @@ if url_links:
                 if img.width > 630 and img.height > 210:
                     box = (x, y, x + 630, y + 210)
                     crop = img.crop(box)
-                    twitter_bg_file_name = f"image_{index+1}_twitter_bg{extension}"
+                    twitter_bg_file_name = f"{search_term}_{index+1}_twitter_bg{extension}"
                     
                     crop_buffer = BytesIO()
                     crop.save(crop_buffer, format=img.format)
@@ -135,7 +172,7 @@ if url_links:
     
     # Provide the download link for the zip file
     zip_buffer.seek(0)
-    zip_file_name = f"{image_id}_images.zip" if mode == "Search by Image ID" else f"{query.replace(' ', '_')}_images.zip"
+    zip_file_name = f"{search_term}_images.zip"
     st.download_button("Download All Images as Zip", zip_buffer, zip_file_name, "application/zip")
 
     st.success("Download and processing complete!")
