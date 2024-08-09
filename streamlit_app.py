@@ -99,16 +99,7 @@ if url_links:
             image_data = r.content
             
             extension = image_url[-4:]
-            file_name = f"{search_term}_{index+1}{extension}"
-            
             img = Image.open(BytesIO(image_data))
-            st.image(img, caption=f"Downloaded Image {index+1}")
-            
-            img_buffer = BytesIO()
-            img.save(img_buffer, format=img.format)
-            
-            # Save the original image in the zip file
-            zf.writestr(file_name, img_buffer.getvalue())
             
             # Cropping logic
             if crop_option == "Save cropped version for profile pics":
@@ -121,11 +112,7 @@ if url_links:
                     y = 0
                 box = (x, y, x + 250, y + 250)
                 crop = img.crop(box)
-                crop_file_name = f"{search_term}_{index+1}_cropped{extension}"
-                
-                crop_buffer = BytesIO()
-                crop.save(crop_buffer, format=img.format)
-                zf.writestr(crop_file_name, crop_buffer.getvalue())
+                file_name = f"{search_term}_{index+1}_cropped{extension}"
                 st.image(crop, caption=f"Cropped Image {index+1}")
 
             elif crop_option == "Crop to custom aspect ratio":
@@ -145,31 +132,26 @@ if url_links:
                 
                 box = (x, y, x + target_width, y + target_height)
                 crop = img.crop(box)
-                crop_file_name = f"{search_term}_{index+1}_{aspect_ratio.replace(':', '_')}{extension}"
+                file_name = f"{search_term}_{index+1}_{aspect_ratio.replace(':', '_')}{extension}"
+                st.image(crop, caption=f"{aspect_ratio} Cropped Image {index+1}")
                 
+                # Only save the cropped image
                 crop_buffer = BytesIO()
                 crop.save(crop_buffer, format=img.format)
-                zf.writestr(crop_file_name, crop_buffer.getvalue())
-                st.image(crop, caption=f"{aspect_ratio} Cropped Image {index+1}")
+                zf.writestr(file_name, crop_buffer.getvalue())
+                continue  # Skip saving the original or other versions
 
-            # Twitter BG
-            if crop_option == "Save cropped version for profile pics" or crop_option == "Crop to custom aspect ratio":
-                if grab_center:
-                    x = 0  # (width/2)-125  Don't adjust X for Twitter banner
-                    y = (img.height / 2) - 105
-                else:
-                    x = 0
-                    y = 0
-                if img.width > 630 and img.height > 210:
-                    box = (x, y, x + 630, y + 210)
-                    crop = img.crop(box)
-                    twitter_bg_file_name = f"{search_term}_{index+1}_twitter_bg{extension}"
-                    
-                    crop_buffer = BytesIO()
-                    crop.save(crop_buffer, format=img.format)
-                    zf.writestr(twitter_bg_file_name, crop_buffer.getvalue())
-                    st.image(crop, caption=f"Twitter Background Image {index+1}")
-    
+            else:
+                # Save the original image if no cropping is selected
+                file_name = f"{search_term}_{index+1}{extension}"
+                st.image(img, caption=f"Original Image {index+1}")
+
+            img_buffer = BytesIO()
+            img.save(img_buffer, format=img.format)
+            
+            # Save the image (either cropped or original) in the zip file
+            zf.writestr(file_name, img_buffer.getvalue())
+
     # Provide the download link for the zip file
     zip_buffer.seek(0)
     zip_file_name = f"{search_term}_images.zip"
