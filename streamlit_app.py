@@ -36,6 +36,8 @@ crop_option = st.radio(
 
 if crop_option == "Crop to custom aspect ratio":
     aspect_ratio = st.radio("Select aspect ratio:", ("16:9", "1:1"))
+    if aspect_ratio == "1:1":
+        size_option = st.radio("Select 1:1 image size:", ("Reduce size to 500x500", "Use original size"))
 else:
     aspect_ratio = None
 
@@ -120,8 +122,11 @@ if url_links:
                 if aspect_ratio == "16:9":
                     target_width = width
                     target_height = int(width * 9 / 16)
-                else:  # "1:1"
-                    target_width = target_height = min(width, height)
+                elif aspect_ratio == "1:1":
+                    if size_option == "Reduce size to 500x500":
+                        target_width = target_height = 500
+                    else:  # "Use original size"
+                        target_width = target_height = min(width, height)
                 
                 if grab_center:
                     x = (width - target_width) / 2
