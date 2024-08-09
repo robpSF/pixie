@@ -1,5 +1,4 @@
 import requests
-import time
 from PIL import Image
 import streamlit as st
 from io import BytesIO
@@ -12,7 +11,7 @@ URL_ENDPOINT = "https://pixabay.com/api/"
 # Streamlit input widgets
 st.title("Pixabay Image Downloader")
 
-query = st.text_input("Enter search query (e.g., 'nature', 'cars'):", "")
+query = st.text_input("Enter search query or image ID (e.g., 'nature', 'cars', or an image ID):", "")
 image_type = st.selectbox("Select image type:", ["all", "photo", "illustration", "vector"], index=1)
 category = st.selectbox("Select category:", ["all", "fashion", "nature", "backgrounds", "science", "education", 
                                              "people", "feelings", "religion", "health", "places", 
@@ -23,30 +22,44 @@ grab_center = st.checkbox("Grab center of image?", True)
 PER_PAGE = st.slider("Number of images per page:", 1, 20, 6)
 NUM_PAGES = st.slider("Number of pages to retrieve:", 1, 10, 3)
 
-PARAMS = {
-    'key': API_KEY,
-    'q': query,
-    'image_type': image_type,
-    'category': category if category != "all" else None,
-    'per_page': PER_PAGE,
-    'page': 1
-}
-
-url_links = []
-
-# Fetch images from Pixabay
-for page in range(1, NUM_PAGES + 1):
-    PARAMS['page'] = page
+# Check if query is an integer (image ID)
+if query.isdigit():
+    # Treat as image ID search
+    PARAMS = {
+        'key': API_KEY,
+        'id': query,
+    }
     req = requests.get(URL_ENDPOINT, params=PARAMS)
     data = req.json()
+    url_links = [data['hits'][0]['largeImageURL']] if 'hits' in data and data['hits'] else []
 
-    if 'hits' in data:
-        for image in data["hits"]:
-            url_links.append(image["largeImageURL"])
-            st.write(image["largeImageURL"])
-    else:
-        st.warning(f"No images found for query '{query}' on page {page}.")
-        break
+    if not url_links:
+        st.warning(f"No image found with the ID '{query}'.")
+
+else:
+    # Treat as a general search
+    PARAMS = {
+        'key': API_KEY,
+        'q': query,
+        'image_type': image_type,
+        'category': category if category != "all" else None,
+        'per_page': PER_PAGE,
+        'page': 1
+    }
+    
+    url_links = []
+    for page in range(1, NUM_PAGES + 1):
+        PARAMS['page'] = page
+        req = requests.get(URL_ENDPOINT, params=PARAMS)
+        data = req.json()
+
+        if 'hits' in data:
+            for image in data["hits"]:
+                url_links.append(image["largeImageURL"])
+                st.write(image["largeImageURL"])
+        else:
+            st.warning(f"No images found for query '{query}' on page {page}.")
+            break
 
 if url_links:
     zip_buffer = BytesIO()
@@ -110,4 +123,7 @@ if url_links:
 
     st.success("Download and processing complete!")
 else:
-    st.warning(f"No images found for the query '{query}'.")
+    if query.isdigit():
+        st.warning(f"No image found with the ID '{query}'.")
+    else:
+        st.warning(f"No images found for the query '{query}'.")
