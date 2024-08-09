@@ -1,6 +1,6 @@
 import requests
 import time
-from PIL import Image
+from PIL import Image, ImageOps
 import streamlit as st
 from io import BytesIO
 import zipfile
@@ -37,7 +37,7 @@ crop_option = st.radio(
 if crop_option == "Crop to custom aspect ratio":
     aspect_ratio = st.radio("Select aspect ratio:", ("16:9", "1:1"))
     if aspect_ratio == "1:1":
-        size_option = st.radio("Select 1:1 image size:", ("Reduce size to 500x500", "Use original size"))
+        size_option = st.radio("Select 1:1 image size:", ("Shrink to 500x500", "Use original size"))
 else:
     aspect_ratio = None
 
@@ -122,21 +122,26 @@ if url_links:
                 if aspect_ratio == "16:9":
                     target_width = width
                     target_height = int(width * 9 / 16)
+                    if target_height > height:  # If height is the limiting factor
+                        target_height = height
+                        target_width = int(height * 16 / 9)
                 elif aspect_ratio == "1:1":
-                    if size_option == "Reduce size to 500x500":
-                        target_width = target_height = 500
+                    if size_option == "Shrink to 500x500":
+                        crop = ImageOps.fit(img, (500, 500), method=Image.LANCZOS, centering=(0.5, 0.5))
                     else:  # "Use original size"
                         target_width = target_height = min(width, height)
+                        if grab_center:
+                            x = (width - target_width) / 2
+                            y = (height - target_height) / 2
+                        else:
+                            x = 0
+                            y = 0
+                        box = (x, y, x + target_width, y + target_height)
+                        crop = img.crop(box)
+
+                if aspect_ratio != "1:1" or size_option == "Shrink to 500x500":
+                    crop = crop.resize((target_width, target_height), Image.LANCZOS)
                 
-                if grab_center:
-                    x = (width - target_width) / 2
-                    y = (height - target_height) / 2
-                else:
-                    x = 0
-                    y = 0
-                
-                box = (x, y, x + target_width, y + target_height)
-                crop = img.crop(box)
                 file_name = f"{search_term}_{index+1}_{aspect_ratio.replace(':', '_')}{extension}"
                 st.image(crop, caption=f"{aspect_ratio} Cropped Image {index+1}")
                 
