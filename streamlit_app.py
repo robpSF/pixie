@@ -22,6 +22,19 @@ grab_center = st.checkbox("Grab center of image?", True)
 PER_PAGE = st.slider("Number of images per page:", 1, 20, 6)
 NUM_PAGES = st.slider("Number of pages to retrieve:", 1, 10, 3)
 
+def fetch_data(params):
+    try:
+        response = requests.get(URL_ENDPOINT, params=params)
+        response.raise_for_status()  # Raises an error for bad status codes
+        return response.json()
+    except requests.exceptions.HTTPError as http_err:
+        st.error(f"HTTP error occurred: {http_err}")
+    except requests.exceptions.RequestException as req_err:
+        st.error(f"Error occurred: {req_err}")
+    except ValueError as json_err:
+        st.error(f"JSON decode error: {json_err}")
+    return None
+
 # Check if query is an integer (image ID)
 if query.isdigit():
     # Treat as image ID search
@@ -29,9 +42,8 @@ if query.isdigit():
         'key': API_KEY,
         'id': query,
     }
-    req = requests.get(URL_ENDPOINT, params=PARAMS)
-    data = req.json()
-    url_links = [data['hits'][0]['largeImageURL']] if 'hits' in data and data['hits'] else []
+    data = fetch_data(PARAMS)
+    url_links = [data['hits'][0]['largeImageURL']] if data and 'hits' in data and data['hits'] else []
 
     if not url_links:
         st.warning(f"No image found with the ID '{query}'.")
@@ -50,10 +62,9 @@ else:
     url_links = []
     for page in range(1, NUM_PAGES + 1):
         PARAMS['page'] = page
-        req = requests.get(URL_ENDPOINT, params=PARAMS)
-        data = req.json()
+        data = fetch_data(PARAMS)
 
-        if 'hits' in data:
+        if data and 'hits' in data:
             for image in data["hits"]:
                 url_links.append(image["largeImageURL"])
                 st.write(image["largeImageURL"])
